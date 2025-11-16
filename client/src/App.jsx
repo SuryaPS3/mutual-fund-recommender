@@ -1,14 +1,126 @@
-import { useState } from 'react'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Navbar from './components/layout/Navbar';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import Dashboard from './pages/dashboard/Dashboard';
+import RiskProfile from './pages/profile/RiskProfile';
+import Recommendations from './pages/recommendations/Recommendations';
+import FundExplorer from './pages/funds/FundExplorer';
+import FundDetailsPage from './pages/funds/FundDetailsPage';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+// Public Route Component (redirect if already authenticated)
+const PublicRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  return !isAuthenticated ? children : <Navigate to="/" />;
+};
+
+function AppRoutes() {
   return (
-    <>
-      <div>Hello How are you</div>
-    </>
-  )
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
+        />
+
+        {/* Protected Routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <RiskProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recommendations"
+          element={
+            <ProtectedRoute>
+              <Recommendations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/funds"
+          element={
+            <ProtectedRoute>
+              <FundExplorer />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/funds/:id"
+          element={
+            <ProtectedRoute>
+              <FundDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback Route */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </div>
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster position="top-right" />
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;
