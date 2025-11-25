@@ -1,0 +1,36 @@
+import mongoose from 'mongoose';
+
+const userSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password_hash: {
+    type: String,
+    required: true
+  },
+  full_name: {
+    type: String,
+    required: true
+  },
+  created_at: {
+    type: Date,
+    default: Date.now
+  },
+  updated_at: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+});
+
+// Index for faster queries
+userSchema.index({ email: 1 });
+
+const User = mongoose.model('User', userSchema);
+
+export default User;
