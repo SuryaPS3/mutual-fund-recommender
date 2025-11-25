@@ -10,7 +10,6 @@ import Recommendations from './pages/recommendations/Recommendations';
 import FundExplorer from './pages/funds/FundExplorer';
 import FundDetailsPage from './pages/funds/FundDetailsPage';
 
-// Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
@@ -25,7 +24,6 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
-// Public Route Component (redirect if already authenticated)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
@@ -45,67 +43,13 @@ function AppRoutes() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          }
-        />
-
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <RiskProfile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recommendations"
-          element={
-            <ProtectedRoute>
-              <Recommendations />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/funds"
-          element={
-            <ProtectedRoute>
-              <FundExplorer />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/funds/:id"
-          element={
-            <ProtectedRoute>
-              <FundDetailsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Fallback Route */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><RiskProfile /></ProtectedRoute>} />
+        <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
+        <Route path="/funds" element={<ProtectedRoute><FundExplorer /></ProtectedRoute>} />
+        <Route path="/funds/:id" element={<ProtectedRoute><FundDetailsPage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>

@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
 import userService from '../../services/userService';
 import toast from 'react-hot-toast';
 
 const RiskProfile = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     risk_profile: '',
     investment_horizon: 12,
@@ -25,7 +23,6 @@ const RiskProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     try {
       await userService.createProfile(formData);
       toast.success('Profile created successfully!');
@@ -119,9 +116,7 @@ const RiskProfile = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Amount (₹)
-            </label>
+            <label className="block text-sm font-medium mb-2">Amount (₹)</label>
             <input
               type="number"
               value={formData.budget_amount}
@@ -134,9 +129,7 @@ const RiskProfile = () => {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Maximum Expense Ratio (%)
-            </label>
+            <label className="block text-sm font-medium mb-2">Maximum Expense Ratio (%)</label>
             <input
               type="number"
               value={formData.expense_ratio_limit}
@@ -157,9 +150,7 @@ const RiskProfile = () => {
               onChange={(e) => handleChange('dividend_preference', e.target.checked)}
               className="mr-2"
             />
-            <label htmlFor="dividend" className="text-sm">
-              Prefer dividend-paying funds
-            </label>
+            <label htmlFor="dividend" className="text-sm">Prefer dividend-paying funds</label>
           </div>
         </Card>
 

@@ -15,7 +15,7 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   if (!isAuthenticated) {
-    return null; // Don't show navbar on login/register pages
+    return null;
   }
 
   return (
@@ -53,7 +53,7 @@ const Navbar = () => {
               }`}
             >
               <BarChart3 className="w-5 h-5" />
-              <span>Explore Funds</span>
+              <span>Explore</span>
             </Link>
             
             <Link
