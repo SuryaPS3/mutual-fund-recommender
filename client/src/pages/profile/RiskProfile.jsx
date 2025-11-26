@@ -28,8 +28,10 @@ const RiskProfile = () => {
       toast.success('Profile created successfully!');
       navigate('/recommendations');
     } catch (error) {
-      console.error('Error saving profile:', error);
-      toast.error('Failed to save profile');
+      // Surface backend validation / auth errors
+      console.error('Error saving profile:', error?.response?.data || error);
+      const msg = error?.response?.data?.message || 'Failed to save profile';
+      toast.error(msg);
     }
   };
 

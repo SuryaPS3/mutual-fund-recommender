@@ -21,7 +21,17 @@ const Login = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (error) {
-      console.error('Login failed:', error);
+      // Log full server error payload (validation errors, messages)
+      console.error('Login failed:', error?.response?.data || error);
+      // Show user-friendly message, prefer server-provided message when present
+      const msg = error?.response?.data?.message || 'Login failed. Please check your credentials.';
+      // If the app uses a toast system in this scope, show it; otherwise console.warn
+      try {
+        // eslint-disable-next-line no-undef
+        toast?.error?.(msg);
+      } catch (e) {
+        console.warn('Toast not available:', msg);
+      }
     } finally {
       setLoading(false);
     }

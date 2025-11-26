@@ -12,9 +12,25 @@ router.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// Mount routes
-router.use('/auth', authRoutes);
-router.use('/profile', profileRoutes);
+// Debug: log route mounting
+console.log('🔧 Mounting routes...');
+console.log('  - /api/auth');
+console.log('  - /api/profile');
+console.log('  - /api/funds');
+console.log('  - /api/recommendations');
+console.log('  - /api/watchlist');
+
+// Mount routes with debug logging
+router.use('/auth', (req, res, next) => {
+  console.log('  → Auth router');
+  next();
+}, authRoutes);
+
+router.use('/profile', (req, res, next) => {
+  console.log('  → Profile router');
+  next();
+}, profileRoutes);
+
 router.use('/funds', fundRoutes);
 router.use('/recommendations', recommendationRoutes);
 router.use('/watchlist', watchlistRoutes);
