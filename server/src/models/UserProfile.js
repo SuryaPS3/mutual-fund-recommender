@@ -49,7 +49,7 @@ const userProfileSchema = new mongoose.Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-userProfileSchema.index({ user_id: 1 });
+
 
 const UserProfile = mongoose.model('UserProfile', userProfileSchema);
 

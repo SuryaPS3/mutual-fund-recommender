@@ -28,8 +28,7 @@ const userSchema = new mongoose.Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-// Index for faster queries
-userSchema.index({ email: 1 });
+
 
 const User = mongoose.model('User', userSchema);
 

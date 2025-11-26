@@ -51,7 +51,7 @@ const fundSchema = new mongoose.Schema({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-fundSchema.index({ scheme_code: 1 });
+
 fundSchema.index({ category: 1, is_active: 1 });
 fundSchema.index({ scheme_name: 'text' });
 
