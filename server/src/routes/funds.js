@@ -11,6 +11,9 @@ import validate from '../middleware/validation.js';
 
 const router = express.Router();
 
+// Get categories (public) - MUST be before /:id route
+router.get('/categories', getCategories);
+
 // Get all funds (public)
 router.get(
   '/',
@@ -42,9 +45,6 @@ router.get(
   validate,
   getNAVHistory
 );
-
-// Get categories (public)
-router.get('/categories', getCategories);
 
 // Compare funds (public)
 router.post(

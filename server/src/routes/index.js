@@ -4,6 +4,7 @@ import profileRoutes from './profile.js';
 import fundRoutes from './funds.js';
 import recommendationRoutes from './recommendations.js';
 import watchlistRoutes from './watchlist.js';
+import adminRoutes from './admin.js';
 
 const router = express.Router();
 
@@ -34,6 +35,7 @@ router.use('/profile', (req, res, next) => {
 router.use('/funds', fundRoutes);
 router.use('/recommendations', recommendationRoutes);
 router.use('/watchlist', watchlistRoutes);
+router.use('/admin', adminRoutes);
 
 // API info
 router.get('/', (req, res) => {

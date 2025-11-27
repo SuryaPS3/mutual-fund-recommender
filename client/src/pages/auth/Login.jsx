@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -25,13 +26,7 @@ const Login = () => {
       console.error('Login failed:', error?.response?.data || error);
       // Show user-friendly message, prefer server-provided message when present
       const msg = error?.response?.data?.message || 'Login failed. Please check your credentials.';
-      // If the app uses a toast system in this scope, show it; otherwise console.warn
-      try {
-        // eslint-disable-next-line no-undef
-        toast?.error?.(msg);
-      } catch (e) {
-        console.warn('Toast not available:', msg);
-      }
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

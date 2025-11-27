@@ -1,6 +1,7 @@
 import app from './app.js';
 import connectDB from './config/db.js';
 import logger from './config/logger.js';
+import fundDataService from './services/fundDataService.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -8,12 +9,15 @@ dotenv.config();
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
-connectDB();
+connectDB().then(() => {
+  // Schedule daily fund data refresh after DB connection
+  fundDataService.scheduleDailyRefresh();
+});
 
 // Start server
 const server = app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-  logger.info(`📍 API available at http://localhost:${PORT}/api`);
+  logger.info('Server running on port ' + PORT + ' in ' + (process.env.NODE_ENV || 'development') + ' mode');
+  logger.info('API available at http://localhost:' + PORT + '/api');
 });
 
 // Graceful shutdown
