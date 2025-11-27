@@ -22,6 +22,10 @@ const recommendationSchema = new mongoose.Schema({
   reason: {
     type: String
   },
+  profile_hash: {
+    type: String,
+    required: true
+  },
   created_at: {
     type: Date,
     default: Date.now
