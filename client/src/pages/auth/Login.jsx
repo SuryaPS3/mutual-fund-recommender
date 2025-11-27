@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -21,7 +22,11 @@ const Login = () => {
       await login(formData.email, formData.password);
       navigate('/');
     } catch (error) {
-      console.error('Login failed:', error);
+      // Log full server error payload (validation errors, messages)
+      console.error('Login failed:', error?.response?.data || error);
+      // Show user-friendly message, prefer server-provided message when present
+      const msg = error?.response?.data?.message || 'Login failed. Please check your credentials.';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

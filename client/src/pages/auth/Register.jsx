@@ -1,109 +1,117 @@
-import { Link } from 'react-router-dom';
-import { TrendingUp, Target, BarChart3, User } from 'lucide-react';
-import Card from '../../components/common/Card';
+﻿import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
 
-const Dashboard = () => {
-  const { user } = useAuth();
+const Register = () => {
+  const [formData, setFormData] = useState({ 
+    full_name: '',
+    email: '', 
+    password: '',
+    confirmPassword: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  const features = [
-    {
-      icon: <User className="w-12 h-12 text-blue-600" />,
-      title: 'Complete Your Profile',
-      description: 'Answer a few questions about your investment goals and risk tolerance',
-      link: '/profile',
-      linkText: 'Set Up Profile',
-      color: 'bg-blue-50',
-    },
-    {
-      icon: <TrendingUp className="w-12 h-12 text-green-600" />,
-      title: 'Get Recommendations',
-      description: 'Receive personalized mutual fund recommendations based on your profile',
-      link: '/recommendations',
-      linkText: 'View Recommendations',
-      color: 'bg-green-50',
-    },
-    {
-      icon: <BarChart3 className="w-12 h-12 text-purple-600" />,
-      title: 'Explore Funds',
-      description: 'Browse through thousands of mutual funds with detailed analytics',
-      link: '/funds',
-      linkText: 'Explore Funds',
-      color: 'bg-purple-50',
-    },
-    {
-      icon: <Target className="w-12 h-12 text-orange-600" />,
-      title: 'Compare Funds',
-      description: 'Compare multiple funds side-by-side to make informed decisions',
-      link: '/funds',
-      linkText: 'Compare Now',
-      color: 'bg-orange-50',
-    },
-  ];
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match!');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(formData.email, formData.password, formData.full_name);
+      toast.success('Account created successfully!');
+      navigate('/profile');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      toast.error(error.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {user?.full_name || 'Investor'}! 👋
-        </h1>
-        <p className="mt-2 text-gray-600">
-          Let's help you find the perfect mutual funds for your investment goals
-        </p>
-      </div>
-
-      <Card className="mb-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Start Your Investment Journey</h2>
-            <p className="text-blue-100 mb-4">
-              Get AI-powered recommendations tailored to your financial goals
-            </p>
-            <Link to="/profile">
-              <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
-                Get Started
-              </button>
-            </Link>
-          </div>
-          <div className="hidden md:block">
-            <TrendingUp className="w-32 h-32 text-blue-400 opacity-50" />
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {features.map((feature, index) => (
-          <Card key={index} className="hover:shadow-lg transition-shadow">
-            <div className={`${feature.color} w-16 h-16 rounded-lg flex items-center justify-center mb-4`}>
-              {feature.icon}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <div className="flex justify-center">
+            <div className="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold text-2xl">
+              MF
             </div>
-            <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-            <p className="text-gray-600 mb-4">{feature.description}</p>
-            <Link to={feature.link}>
-              <button className="text-blue-600 font-semibold hover:text-blue-700 transition-colors">
-                {feature.linkText} →
-              </button>
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              Sign in
             </Link>
-          </Card>
-        ))}
-      </div>
+          </p>
+        </div>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="text-center">
-          <div className="text-3xl font-bold text-blue-600">10,000+</div>
-          <div className="text-gray-600 mt-2">Mutual Funds</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-3xl font-bold text-green-600">AI-Powered</div>
-          <div className="text-gray-600 mt-2">Recommendations</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-3xl font-bold text-purple-600">Real-time</div>
-          <div className="text-gray-600 mt-2">NAV Updates</div>
-        </Card>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="bg-white p-8 rounded-lg shadow-md space-y-4">
+            <Input
+              label="Full Name"
+              type="text"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              placeholder="John Doe"
+              required
+            />
+            <Input
+              label="Email address"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="your@email.com"
+              required
+            />
+            <Input
+              label="Password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="At least 6 characters"
+              required
+            />
+            <Input
+              label="Confirm Password"
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Repeat password"
+              required
+            />
+            <Button type="submit" variant="primary" disabled={loading} className="w-full mt-6">
+              {loading ? 'Creating account...' : 'Create account'}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
 
-export default Dashboard;
+export default Register;
