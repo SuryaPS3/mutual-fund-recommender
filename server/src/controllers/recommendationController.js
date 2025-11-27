@@ -1,10 +1,24 @@
 import axios from 'axios';
+import crypto from 'crypto';
 import UserProfile from '../models/UserProfile.js';
 import Fund from '../models/Fund.js';
 import FundMetrics from '../models/FundMetrics.js';
 import Recommendation from '../models/Recommendation.js';
 import { asyncHandler } from '../utils/helpers.js';
 import { NotFoundError } from '../utils/errors.js';
+
+// Helper function to generate profile hash
+function generateProfileHash(profile) {
+  const profileData = {
+    risk_profile: profile.risk_profile,
+    investment_horizon: profile.investment_horizon,
+    expense_ratio_limit: profile.expense_ratio_limit,
+    dividend_preference: profile.dividend_preference,
+    budget_type: profile.budget_type,
+    investment_goal: profile.investment_goal
+  };
+  return crypto.createHash('sha256').update(JSON.stringify(profileData)).digest('hex');
+}
 
 export const getRecommendations = asyncHandler(async (req, res) => {
   const userId = req.user.user_id;
@@ -15,31 +29,84 @@ export const getRecommendations = asyncHandler(async (req, res) => {
     throw new NotFoundError('User profile not found. Please complete your profile first.');
   }
 
-  // Get all active funds with metrics
-  const funds = await Fund.find({ is_active: true }).lean();
+  // Generate current profile hash
+  const currentProfileHash = generateProfileHash(profile);
 
-  // Limit to 1000 funds for performance
-  const limitedFunds = funds.slice(0, 1000);
-  
-  const fundsWithMetrics = await Promise.all(
-    limitedFunds.map(async (fund) => {
-      const metrics = await FundMetrics.findOne({ fund_id: fund._id })
-        .sort({ computed_at: -1 })
-        .lean();
-      
-      return {
-        fund_id: fund._id.toString(),
-        return_1m: metrics?.return_1m || 0,
-        return_3m: metrics?.return_3m || 0,
-        return_6m: metrics?.return_6m || 0,
-        return_1y: metrics?.return_1y || 0,
-        volatility: metrics?.volatility || 10,
-        expense_ratio: fund.expense_ratio || 1.5,
-        aum: fund.aum || 100,
-        risk_rating: fund.risk_rating === 'High' ? 5 : fund.risk_rating === 'Low' ? 1 : 3
-      };
-    })
-  );
+  // Check if we have existing recommendations for this profile
+  const existingRecommendations = await Recommendation.find({ 
+    user_id: userId,
+    profile_hash: currentProfileHash 
+  }).sort({ rank: 1 }).lean();
+
+  if (existingRecommendations.length > 0) {
+    console.log('✅ Returning cached recommendations for user:', userId);
+    
+    // Get full fund details for existing recommendations
+    const enrichedRecommendations = await Promise.all(
+      existingRecommendations.map(async (rec) => {
+        const fund = await Fund.findById(rec.fund_id).lean();
+        return {
+          _id: rec._id,
+          fund_id: rec.fund_id,
+          score: rec.score,
+          rank: rec.rank,
+          reason: rec.reason,
+          fund: {
+            ...fund,
+            fund_id: fund._id
+          }
+        };
+      })
+    );
+
+    return res.json(enrichedRecommendations);
+  }
+
+  console.log('🔄 Generating new recommendations for user:', userId);
+
+  // Use aggregation pipeline to efficiently join funds with their latest metrics
+  const fundsWithMetrics = await Fund.aggregate([
+    { $match: { is_active: true } },
+    { $limit: 500 }, // Reduced for faster processing
+    {
+      $lookup: {
+        from: 'fundmetrics',
+        let: { fundId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$fund_id', '$$fundId'] } } },
+          { $sort: { computed_at: -1 } },
+          { $limit: 1 }
+        ],
+        as: 'metrics'
+      }
+    },
+    {
+      $addFields: {
+        latestMetrics: { $arrayElemAt: ['$metrics', 0] }
+      }
+    },
+    {
+      $project: {
+        fund_id: { $toString: '$_id' },
+        return_1m: { $ifNull: ['$latestMetrics.return_1m', 0] },
+        return_3m: { $ifNull: ['$latestMetrics.return_3m', 0] },
+        return_6m: { $ifNull: ['$latestMetrics.return_6m', 0] },
+        return_1y: { $ifNull: ['$latestMetrics.return_1y', 0] },
+        volatility: { $ifNull: ['$latestMetrics.volatility', 10] },
+        expense_ratio: { $ifNull: ['$expense_ratio', 1.5] },
+        aum: { $ifNull: ['$aum', 100] },
+        risk_rating: {
+          $switch: {
+            branches: [
+              { case: { $eq: ['$risk_rating', 'High'] }, then: 5 },
+              { case: { $eq: ['$risk_rating', 'Low'] }, then: 1 }
+            ],
+            default: 3
+          }
+        }
+      }
+    }
+  ]);
 
   // Prepare user profile for ML service
   const userProfile = {
@@ -63,7 +130,7 @@ export const getRecommendations = asyncHandler(async (req, res) => {
 
     const recommendations = mlResponse.data;
 
-    // Save recommendations
+    // Save recommendations with profile hash
     await Recommendation.deleteMany({ user_id: userId });
     
     const savedRecommendations = await Promise.all(
@@ -73,7 +140,8 @@ export const getRecommendations = asyncHandler(async (req, res) => {
           fund_id: rec.fund_id,
           score: rec.score,
           rank: index + 1,
-          reason: rec.reason
+          reason: rec.reason,
+          profile_hash: currentProfileHash
         })
       )
     );
@@ -83,6 +151,7 @@ export const getRecommendations = asyncHandler(async (req, res) => {
       savedRecommendations.map(async (rec) => {
         const fund = await Fund.findById(rec.fund_id).lean();
         return {
+          _id: rec._id,
           fund_id: rec.fund_id,
           score: rec.score,
           rank: rec.rank,
@@ -135,37 +204,38 @@ export const getRecommendations = asyncHandler(async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
     
-    // Save fallback recommendations
+    // Save fallback recommendations with profile hash
     await Recommendation.deleteMany({ user_id: userId });
     
-    const savedRecommendations = await Promise.all(
-      scoredFunds.map((rec, index) =>
-        Recommendation.create({
-          user_id: userId,
-          fund_id: rec.fund_id,
-          score: rec.score,
-          rank: index + 1,
-          reason: rec.reason
-        })
-      )
+    const savedRecommendations = await Recommendation.insertMany(
+      scoredFunds.map((rec, index) => ({
+        user_id: userId,
+        fund_id: rec.fund_id,
+        score: rec.score,
+        rank: index + 1,
+        reason: rec.reason,
+        profile_hash: currentProfileHash
+      }))
     );
     
-    // Get full fund details
-    const enrichedRecommendations = await Promise.all(
-      savedRecommendations.map(async (rec) => {
-        const fund = await Fund.findById(rec.fund_id).lean();
-        return {
-          fund_id: rec.fund_id,
-          score: rec.score,
-          rank: rec.rank,
-          reason: rec.reason,
-          fund: {
-            ...fund,
-            fund_id: fund._id
-          }
-        };
-      })
+    // Get full fund details efficiently
+    const fundIds = savedRecommendations.map(rec => rec.fund_id);
+    const fundsMap = new Map(
+      (await Fund.find({ _id: { $in: fundIds } }).lean())
+        .map(f => [f._id.toString(), f])
     );
+    
+    const enrichedRecommendations = savedRecommendations.map(rec => {
+      const fund = fundsMap.get(rec.fund_id.toString());
+      return {
+        _id: rec._id,
+        fund_id: rec.fund_id,
+        score: rec.score,
+        rank: rec.rank,
+        reason: rec.reason,
+        fund: fund ? { ...fund, fund_id: fund._id } : null
+      };
+    });
     
     res.json(enrichedRecommendations);
   }

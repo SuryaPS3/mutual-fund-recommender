@@ -1,4 +1,5 @@
 import UserProfile from '../models/UserProfile.js';
+import Recommendation from '../models/Recommendation.js';
 import { asyncHandler } from '../utils/helpers.js';
 import { NotFoundError } from '../utils/errors.js';
 
@@ -27,6 +28,10 @@ export const createProfile = asyncHandler(async (req, res) => {
     profile.investment_goal = investment_goal;
     profile.updated_at = Date.now();
     await profile.save();
+    
+    // Clear existing recommendations to force regeneration
+    await Recommendation.deleteMany({ user_id: req.user.user_id });
+    console.log('✅ Profile updated and recommendations cleared for user:', req.user.user_id);
   } else {
     // Create new profile
     profile = await UserProfile.create({
@@ -64,6 +69,10 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (!profile) {
     throw new NotFoundError('Profile not found');
   }
+
+  // Clear existing recommendations to force regeneration
+  await Recommendation.deleteMany({ user_id: req.user.user_id });
+  console.log('✅ Profile updated and recommendations cleared for user:', req.user.user_id);
 
   res.json(profile);
 });

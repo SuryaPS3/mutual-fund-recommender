@@ -12,8 +12,8 @@ const RecommendationList = ({ recommendations, loading }) => {
 
   return (
     <div className="space-y-4">
-      {recommendations.map((rec, index) => (
-        <RecommendationCard key={rec.fund_id} recommendation={rec} rank={index + 1} />
+      {recommendations.map((rec) => (
+        <RecommendationCard key={rec._id || rec.rank} recommendation={rec} rank={rec.rank} />
       ))}
     </div>
   );
