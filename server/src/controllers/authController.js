@@ -10,7 +10,10 @@ export const register = asyncHandler(async (req, res) => {
   // Check if user exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    throw new ValidationError('User already exists with this email');
+    return res.status(400).json({
+      success: false,
+      message: 'User already exists with this email'
+    });
   }
 
   // Hash password
@@ -47,13 +50,19 @@ export const login = asyncHandler(async (req, res) => {
   // Find user
   const user = await User.findOne({ email });
   if (!user) {
-    throw new ValidationError('Invalid credentials');
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid credentials'
+    });
   }
 
   // Verify password
   const isValidPassword = await bcrypt.compare(password, user.password_hash);
   if (!isValidPassword) {
-    throw new ValidationError('Invalid credentials');
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid credentials'
+    });
   }
 
   // Generate token
