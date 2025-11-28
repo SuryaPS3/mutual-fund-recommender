@@ -23,6 +23,9 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Prevent multiple submissions
+    if (loading) return;
+    
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match!');
       return;
@@ -74,7 +77,7 @@ const Register = () => {
               name="full_name"
               value={formData.full_name}
               onChange={handleChange}
-              placeholder="John Doe"
+              placeholder="Enter your name"
               required
             />
             <Input
