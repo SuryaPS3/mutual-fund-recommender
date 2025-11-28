@@ -16,7 +16,7 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:5173'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['https://mutual-fund-recommender-frontendtest.onrender.com'];
 
 app.use(cors({
   origin: (origin, callback) => {
