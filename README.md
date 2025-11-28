@@ -2,6 +2,9 @@
 
 AI-powered mutual fund recommendation system that provides personalized investment suggestions based on user risk profiles, investment goals, and financial parameters. Built with React, Node.js, Express, MongoDB, and featuring real-time data from AMFI India.
 
+Live Demo: https://mutual-fund-recommender-frontendtest.onrender.com/
+
+A comprehensive mutual fund recommendation platform that provides personalized investment suggestions based on user risk profiles and financial goals. Built with modern web technologies and deployed on Render cloud platform.
 ## 🌟 Features
 
 ### Core Functionality
