@@ -147,7 +147,6 @@ class FundDataService {
 
   async calculateMetrics() {
     logger.info('🧮 Calculating fund metrics...');
-    const funds = await Fund.find({ is_active: true });
     const today = new Date();
     const periods = {
         return_1m: 30,
@@ -156,11 +155,31 @@ class FundDataService {
         return_1y: 365,
     };
 
-    for (const fund of funds) {
-        const navs = await NAVHistory.find({ fund_id: fund._id }).sort({ nav_date: -1 });
-        if (navs.length < 2) continue;
+    // Only get fund IDs that actually have NAV history (at least 2 records)
+    const fundsWithNavs = await NAVHistory.aggregate([
+      { $group: { _id: '$fund_id', count: { $sum: 1 } } },
+      { $match: { count: { $gte: 2 } } }
+    ]);
 
-        const metrics = { fund_id: fund._id, computed_at: today };
+    const fundIdsWithHistory = fundsWithNavs.map(f => f._id);
+    logger.info(`Found ${fundIdsWithHistory.length} funds with NAV history to process.`);
+
+    if (fundIdsWithHistory.length === 0) {
+      logger.info('⚠️ No funds with sufficient NAV history. Skipping metrics calculation.');
+      return;
+    }
+
+    const BATCH_SIZE = 100;
+    let processed = 0;
+
+    for (let i = 0; i < fundIdsWithHistory.length; i += BATCH_SIZE) {
+      const batch = fundIdsWithHistory.slice(i, i + BATCH_SIZE);
+      
+      await Promise.all(batch.map(async (fundId) => {
+        const navs = await NAVHistory.find({ fund_id: fundId }).sort({ nav_date: -1 }).lean();
+        if (navs.length < 2) return;
+
+        const metrics = { fund_id: fundId, computed_at: today };
 
         // Calculate returns
         const latestNav = navs[0];
@@ -174,11 +193,11 @@ class FundDataService {
 
         // Calculate volatility (1-year standard deviation of daily returns)
         const oneYearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
-        const recentNavs = navs.filter(n => n.nav_date >= oneYearAgo).reverse(); // oldest to newest
+        const recentNavs = navs.filter(n => n.nav_date >= oneYearAgo).reverse();
         if (recentNavs.length > 1) {
             const dailyReturns = [];
-            for (let i = 1; i < recentNavs.length; i++) {
-                const dailyReturn = (recentNavs[i].nav_value - recentNavs[i-1].nav_value) / recentNavs[i-1].nav_value;
+            for (let j = 1; j < recentNavs.length; j++) {
+                const dailyReturn = (recentNavs[j].nav_value - recentNavs[j-1].nav_value) / recentNavs[j-1].nav_value;
                 dailyReturns.push(dailyReturn);
             }
             if(dailyReturns.length > 0) {
@@ -188,8 +207,13 @@ class FundDataService {
             }
         }
         
-        await FundMetrics.findOneAndUpdate({ fund_id: fund._id }, metrics, { upsert: true });
+        await FundMetrics.findOneAndUpdate({ fund_id: fundId }, metrics, { upsert: true });
+      }));
+
+      processed += batch.length;
+      logger.info(`  📊 Processed ${processed}/${fundIdsWithHistory.length} funds...`);
     }
+
     logger.info('✅ Fund metrics calculation complete.');
   }
 

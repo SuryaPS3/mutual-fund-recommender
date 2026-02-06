@@ -24,39 +24,82 @@ export const getAllFunds = asyncHandler(async (req, res) => {
     query.scheme_name = { $regex: search, $options: 'i' };
   }
 
-  const skip = (page - 1) * limit;
-  const sortOrder = order === 'desc' ? -1 : 1;
-
-  const funds = await Fund.find(query)
-    .sort({ [sortBy]: sortOrder })
-    .skip(skip)
-    .limit(parseInt(limit))
-    .lean();
-
-  // Get latest metrics for each fund
-  const fundsWithMetrics = await Promise.all(
-    funds.map(async (fund) => {
-      const metrics = await FundMetrics.findOne({ fund_id: fund._id })
-        .sort({ computed_at: -1 })
-        .lean();
-      
-      return {
-        ...fund,
-        fund_id: fund._id,
-        ...metrics
-      };
-    })
-  );
-
   const total = await Fund.countDocuments(query);
 
+  // Metrics-based sort fields
+  const metricsSortFields = ['return_1m', 'return_3m', 'return_6m', 'return_1y', 'volatility'];
+  const isMetricsSort = metricsSortFields.includes(sortBy);
+
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const sortOrder = order === 'desc' ? -1 : 1;
+
+  let funds;
+
+  if (isMetricsSort) {
+    // Use aggregation to sort by metrics fields
+    const pipeline = [
+      { $match: query },
+      {
+        $lookup: {
+          from: 'fundmetrics',
+          let: { fundId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$fund_id', '$$fundId'] } } },
+            { $sort: { computed_at: -1 } },
+            { $limit: 1 }
+          ],
+          as: 'metrics'
+        }
+      },
+      {
+        $addFields: {
+          latestMetrics: { $arrayElemAt: ['$metrics', 0] },
+          fund_id: '$_id'
+        }
+      },
+      { $sort: { [`latestMetrics.${sortBy}`]: sortOrder, scheme_name: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+      { $project: { metrics: 0 } }
+    ];
+
+    funds = await Fund.aggregate(pipeline);
+
+    // Flatten metrics into fund object
+    funds = funds.map(fund => {
+      const { latestMetrics, ...rest } = fund;
+      return { ...rest, ...(latestMetrics || {}) };
+    });
+  } else {
+    funds = await Fund.find(query)
+      .sort({ [sortBy]: sortOrder })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Get latest metrics for each fund
+    funds = await Promise.all(
+      funds.map(async (fund) => {
+        const metrics = await FundMetrics.findOne({ fund_id: fund._id })
+          .sort({ computed_at: -1 })
+          .lean();
+        
+        return {
+          ...fund,
+          fund_id: fund._id,
+          ...(metrics || {})
+        };
+      })
+    );
+  }
+
   res.json({
-    funds: fundsWithMetrics,
+    funds,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
       total,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / parseInt(limit))
     }
   });
 });

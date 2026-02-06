@@ -175,7 +175,6 @@ export const getRecommendations = asyncHandler(async (req, res) => {
     
     // Filter and score funds based on user profile
     const scoredFunds = fundsWithMetrics
-      .filter(f => f.expense_ratio <= profile.expense_ratio_limit)
       .map(fund => {
         let score = 0;
         
@@ -189,6 +188,11 @@ export const getRecommendations = asyncHandler(async (req, res) => {
         
         // Penalize high expense ratios
         score -= fund.expense_ratio * 5;
+
+        // Bonus for funds within expense ratio limit
+        if (fund.expense_ratio <= (profile.expense_ratio_limit || 2.5)) {
+          score += 10;
+        }
         
         // Penalize high volatility for conservative investors
         if (userRiskLevel <= 2) {
